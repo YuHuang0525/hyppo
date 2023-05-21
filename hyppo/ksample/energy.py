@@ -1,10 +1,10 @@
 from ..independence.dcorr import _dcov
 from ..tools import compute_dist
-from ._utils import _CheckInputs
+from ._utils import _CheckInputs, k_sample_transform
 from .base import KSampleTest, KSampleTestOutput
+from .ksamp import KSampleTest
 from .ksamp import KSample
-import numpy as np
-import dcor
+
 
 class Energy(KSampleTest):
     r"""
@@ -107,17 +107,18 @@ class Energy(KSampleTest):
         stat : float
             The computed Energy statistic.
         """
-        dataMatrix = np.concatenate([x, y])
-        labelMatrix = np.concatenate([np.zeros(len(x)), np.ones(len(y))])
         n = x.shape[0]
         m = y.shape[0]
         
-        dcov = dcor.distance_covariance_sqr(dataMatrix, labelMatrix)
+        x, y = k_sample_transform([x, y])
+        distx, disty = compute_dist(x, y, metric=self.compute_distance, **self.kwargs)
 
         # exact equivalence transformation Dcorr and Energy
         stat = (
             
-            dcov / ((2 * (n**2) * (m**2)) / ((n + m) ** 4))
+            _dcov(distx, disty, self.bias, only_dcov=True)
+            * ((n + m) ** 4)
+            / (2 * (n**2) * (m**2))
 
         )
         self.stat = stat
